@@ -59,11 +59,9 @@ function parseMarkdownTableToTabWidget(tableText) {
     const trimmed = tableText.trim();
     if (!trimmed) return '';
 
-    // Pisahkan baris dengan newline, hapus baris kosong
     const lines = trimmed.split(/\r?\n/).filter(l => l.trim() !== '');
     if (lines.length < 2) {
-        console.warn('⚠️ Tabel #tab terlalu pendek:', trimmed);
-        return `<pre style="background:var(--bg-card-secondary);padding:1rem;border-radius:12px;">${escapeHtml(trimmed)}</pre>`;
+        return `<pre class="fallback-table">${escapeHtml(trimmed)}</pre>`;
     }
 
     function splitRow(row) {
@@ -74,14 +72,13 @@ function parseMarkdownTableToTabWidget(tableText) {
     }
 
     const headers = splitRow(lines[0]);
-    if (headers.length === 0 || headers.every(h => h === '' || h === '---')) {
-        console.warn('⚠️ Header tabel tidak valid:', lines[0]);
-        return `<pre style="background:var(--bg-card-secondary);padding:1rem;border-radius:12px;">${escapeHtml(trimmed)}</pre>`;
+    if (headers.length === 0) {
+        return `<pre class="fallback-table">${escapeHtml(trimmed)}</pre>`;
     }
 
     // Cari baris pemisah (---) untuk menentukan awal data
     let dataStart = 1;
-    if (lines[1] && lines[1].includes('---')) {
+    if (lines[1] && /^[\s\-|]+$/.test(lines[1]) && lines[1].includes('---')) {
         dataStart = 2;
     }
 
@@ -92,11 +89,9 @@ function parseMarkdownTableToTabWidget(tableText) {
     }
 
     if (rows.length === 0) {
-        console.warn('⚠️ Tidak ada baris data untuk tabel:', trimmed);
-        return `<pre style="background:var(--bg-card-secondary);padding:1rem;border-radius:12px;">${escapeHtml(trimmed)}</pre>`;
+        return `<pre class="fallback-table">${escapeHtml(trimmed)}</pre>`;
     }
 
-    // Build tab widget
     let tabHeadersHtml = `<div class="tab-headers">`;
     let panesHtml = `<div class="tab-content">`;
 
@@ -178,46 +173,106 @@ function renderTableWidget(item) {
     return `<div class="tab-widget">${tabHeadersHtml}${panesHtml}</div>`;
 }
 
-// ✅ PERBAIKAN UTAMA: Fungsi renderBab dengan parser yang lebih aman
+// ======================== PERBAIKAN TOTAL: renderBab ========================
 function renderBab(babId) {
     let text = babData[babId];
     if (!text) return '<div class="content-card"><p>Konten bab tidak tersedia.</p></div>';
 
-    // ✅ Regex diperbaiki: [ \t]* agar tidak memakan newline
-    text = text.replace(/#tab[ \t]*[\r\n]+([\s\S]*?)(?=\n\n|$)/gm, (match, tableBlock) => {
-        console.log('🔍 Ditemukan #tab, memproses:', tableBlock);
-        return parseMarkdownTableToTabWidget(tableBlock);
-    });
-
-    // Bersihkan sisa baris #tab yang mungkin tidak tertangkap
-    text = text.replace(/^#tab\s*$/gm, '');
-
-    // Parse markdown ke HTML dengan struktur yang benar
+    // PROSES BARIS PER BARIS - State Machine Sederhana
+    const lines = text.split(/\r?\n/);
     let html = '';
-    const blocks = text.split(/\n\n+/); // pisahkan berdasarkan paragraf
-    for (let block of blocks) {
-        block = block.trim();
-        if (!block) continue;
+    let buffer = '';           // Menampung teks paragraf
+    let tableBuffer = '';      // Menampung teks tabel
+    let inTable = false;       // Flag sedang dalam mode tabel
+    let tableJustEnded = false;
 
-        if (block.startsWith('## ')) {
-            html += `<h2>${escapeHtml(block.slice(3))}</h2>`;
-        } else if (block.startsWith('### ')) {
-            html += `<h3>${escapeHtml(block.slice(4))}</h3>`;
-        } else if (block.includes('<div class="tab-widget">')) {
-            html += block;
-        } else {
-            let p = block
-                .replace(/\n/g, '<br>')
+    function flushBuffer() {
+        if (buffer.trim()) {
+            let p = buffer.trim()
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/__(.*?)__/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/_(.*?)_/g, '<em>$1</em>');
             html += `<p>${p}</p>`;
+            buffer = '';
         }
     }
 
-    return `<div class="content-card">${html}</div>`;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmedLine = line.trim();
+
+        // Deteksi heading
+        if (!inTable && trimmedLine.startsWith('## ')) {
+            flushBuffer();
+            html += `<h2>${escapeHtml(trimmedLine.slice(3))}</h2>`;
+            continue;
+        }
+        if (!inTable && trimmedLine.startsWith('### ')) {
+            flushBuffer();
+            html += `<h3>${escapeHtml(trimmedLine.slice(4))}</h3>`;
+            continue;
+        }
+
+        // Deteksi marker #tab
+        if (!inTable && trimmedLine === '#tab') {
+            flushBuffer();
+            inTable = true;
+            tableBuffer = '';
+            continue;
+        }
+
+        // Dalam mode tabel
+        if (inTable) {
+            // Jika bertemu baris kosong DAN setelahnya ada heading atau #tab, akhiri tabel
+            if (trimmedLine === '') {
+                // Cek apakah baris berikutnya adalah heading atau #tab
+                let nextNonEmpty = '';
+                for (let j = i + 1; j < lines.length; j++) {
+                    if (lines[j].trim() !== '') {
+                        nextNonEmpty = lines[j].trim();
+                        break;
+                    }
+                }
+                if (nextNonEmpty.startsWith('## ') || nextNonEmpty.startsWith('### ') || nextNonEmpty === '#tab') {
+                    // Akhiri tabel
+                    if (tableBuffer.trim()) {
+                        html += parseMarkdownTableToTabWidget(tableBuffer.trim());
+                    }
+                    inTable = false;
+                    tableJustEnded = true;
+                    continue;
+                }
+            }
+            
+            tableBuffer += line + '\n';
+            continue;
+        }
+
+        // Di luar tabel: kumpulkan paragraf
+        if (tableJustEnded && trimmedLine === '') {
+            tableJustEnded = false;
+            continue;
+        }
+        tableJustEnded = false;
+
+        if (trimmedLine === '') {
+            flushBuffer();
+        } else {
+            if (buffer) buffer += '\n';
+            buffer += line;
+        }
     }
+
+    // Sisa buffer
+    if (inTable && tableBuffer.trim()) {
+        html += parseMarkdownTableToTabWidget(tableBuffer.trim());
+    } else if (!inTable) {
+        flushBuffer();
+    }
+
+    return `<div class="content-card">${html}</div>`;
+}
 
 function renderKesimpulan() {
     const data = closingData.kesimpulan;
@@ -379,7 +434,6 @@ function applyTheme() {
 function toggleTheme() {
     darkMode = !darkMode;
     applyTheme();
-    // Reinitialize canvas with new colors
     initBars();
 }
 
