@@ -59,8 +59,12 @@ function parseMarkdownTableToTabWidget(tableText) {
     const trimmed = tableText.trim();
     if (!trimmed) return '';
 
+    // Pisahkan baris dengan newline, hapus baris kosong
     const lines = trimmed.split(/\r?\n/).filter(l => l.trim() !== '');
-    if (lines.length < 2) return '';
+    if (lines.length < 2) {
+        console.warn('⚠️ Tabel #tab terlalu pendek:', trimmed);
+        return `<pre style="background:var(--bg-card-secondary);padding:1rem;border-radius:12px;">${escapeHtml(trimmed)}</pre>`;
+    }
 
     function splitRow(row) {
         let cleaned = row.trim();
@@ -70,11 +74,16 @@ function parseMarkdownTableToTabWidget(tableText) {
     }
 
     const headers = splitRow(lines[0]);
-    if (headers.length === 0) return '';
+    if (headers.length === 0 || headers.every(h => h === '' || h === '---')) {
+        console.warn('⚠️ Header tabel tidak valid:', lines[0]);
+        return `<pre style="background:var(--bg-card-secondary);padding:1rem;border-radius:12px;">${escapeHtml(trimmed)}</pre>`;
+    }
 
+    // Cari baris pemisah (---) untuk menentukan awal data
     let dataStart = 1;
-    // Lewati baris pemisah jika ada (---)
-    if (lines[1] && lines[1].includes('---')) dataStart = 2;
+    if (lines[1] && lines[1].includes('---')) {
+        dataStart = 2;
+    }
 
     const rows = [];
     for (let i = dataStart; i < lines.length; i++) {
@@ -82,7 +91,10 @@ function parseMarkdownTableToTabWidget(tableText) {
         if (cells.length > 0) rows.push(cells);
     }
 
-    if (rows.length === 0) return '';
+    if (rows.length === 0) {
+        console.warn('⚠️ Tidak ada baris data untuk tabel:', trimmed);
+        return `<pre style="background:var(--bg-card-secondary);padding:1rem;border-radius:12px;">${escapeHtml(trimmed)}</pre>`;
+    }
 
     // Build tab widget
     let tabHeadersHtml = `<div class="tab-headers">`;
@@ -171,8 +183,9 @@ function renderBab(babId) {
     let text = babData[babId];
     if (!text) return '<div class="content-card"><p>Konten bab tidak tersedia.</p></div>';
 
-    // Proses #tab markers
-    text = text.replace(/#tab\s*\n([\s\S]*?)(?=\n\n|$)/gm, (match, tableBlock) => {
+    // Proses #tab markers — regex lebih toleran terhadap spasi dan newline
+    text = text.replace(/#tab\s*[\r\n]+([\s\S]*?)(?=\n\n|$)/gm, (match, tableBlock) => {
+        console.log('🔍 Ditemukan #tab, memproses:', tableBlock);
         return parseMarkdownTableToTabWidget(tableBlock);
     });
 
@@ -404,7 +417,6 @@ function buildSidebar() {
         li.style.setProperty('--index', idx);
         
         const a = document.createElement('a');
-        // ✅ Perbaikan href yang valid
         a.href = `#${ch.id === 'homePage' ? '' : ch.id}`;
         a.textContent = ch.title;
         a.addEventListener('click', (e) => {
