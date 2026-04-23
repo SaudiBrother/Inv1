@@ -183,8 +183,8 @@ function renderBab(babId) {
     let text = babData[babId];
     if (!text) return '<div class="content-card"><p>Konten bab tidak tersedia.</p></div>';
 
-    // Proses #tab markers — regex lebih toleran terhadap spasi dan newline
-    text = text.replace(/#tab\s*[\r\n]+([\s\S]*?)(?=\n\n|$)/gm, (match, tableBlock) => {
+    // ✅ Regex diperbaiki: [ \t]* agar tidak memakan newline
+    text = text.replace(/#tab[ \t]*[\r\n]+([\s\S]*?)(?=\n\n|$)/gm, (match, tableBlock) => {
         console.log('🔍 Ditemukan #tab, memproses:', tableBlock);
         return parseMarkdownTableToTabWidget(tableBlock);
     });
@@ -204,10 +204,8 @@ function renderBab(babId) {
         } else if (block.startsWith('### ')) {
             html += `<h3>${escapeHtml(block.slice(4))}</h3>`;
         } else if (block.includes('<div class="tab-widget">')) {
-            // tab widget yang sudah diproses
             html += block;
         } else {
-            // Paragraf biasa: proses bold, italic, dll.
             let p = block
                 .replace(/\n/g, '<br>')
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -219,7 +217,7 @@ function renderBab(babId) {
     }
 
     return `<div class="content-card">${html}</div>`;
-}
+    }
 
 function renderKesimpulan() {
     const data = closingData.kesimpulan;
