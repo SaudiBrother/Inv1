@@ -74,8 +74,6 @@ async function loadAllData() {
 
             { id: "bab6", title: "📐 Bab 6: Implementasi" },
 
-            { id: "bab7", title: "🔥 Bab 7: Konsistensi & Kedisiplinan" },
-
             { id: "kesimpulan", title: "🎯 Kesimpulan" }
 
         ];
