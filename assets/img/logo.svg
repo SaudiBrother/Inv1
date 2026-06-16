@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Logo Belajar Investasi">
+  <title>Belajar Investasi</title>
+  <defs>
+    <linearGradient id="biBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3E8862"/>
+      <stop offset="55%" stop-color="#2C6E49"/>
+      <stop offset="100%" stop-color="#163C28"/>
+    </linearGradient>
+    <linearGradient id="biBarGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE8A3"/>
+      <stop offset="45%" stop-color="#FFE066"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+    <linearGradient id="biLeafGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4C9A6F"/>
+      <stop offset="100%" stop-color="#A8E8C2"/>
+    </linearGradient>
+    <radialGradient id="biGlow" cx="28%" cy="18%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background squircle -->
+  <rect x="2" y="2" width="96" height="96" rx="22" fill="url(#biBgGrad)"/>
+  <rect x="2" y="2" width="96" height="96" rx="22" fill="url(#biGlow)"/>
+  <rect x="2.75" y="2.75" width="94.5" height="94.5" rx="21.25" fill="none" stroke="#D4AF37" stroke-width="1.5" opacity="0.45"/>
+
+  <!-- Baseline -->
+  <rect x="18" y="80" width="64" height="2.5" rx="1.25" fill="#D4AF37" opacity="0.3"/>
+
+  <!-- Growth bars -->
+  <rect x="20" y="56" width="13" height="24" rx="3.5" fill="url(#biBarGrad)"/>
+  <rect x="39" y="44" width="13" height="36" rx="3.5" fill="url(#biBarGrad)"/>
+  <rect x="58" y="29" width="13" height="51" rx="3.5" fill="url(#biBarGrad)"/>
+
+  <!-- Bar shine -->
+  <rect x="20" y="56" width="13" height="6" rx="3.5" fill="#FFFFFF" opacity="0.35"/>
+  <rect x="39" y="44" width="13" height="6" rx="3.5" fill="#FFFFFF" opacity="0.35"/>
+  <rect x="58" y="29" width="13" height="6" rx="3.5" fill="#FFFFFF" opacity="0.35"/>
+
+  <!-- Sprouting leaf above tallest bar -->
+  <g transform="translate(64.5,29) rotate(-28)">
+    <path d="M0,0 C9,-4.5 10,-19 0,-28 C-10,-19 -9,-4.5 0,0 Z" fill="url(#biLeafGrad)"/>
+    <path d="M0,0 L0,-28" stroke="#2C6E49" stroke-width="1.1" opacity="0.45" fill="none"/>
+  </g>
+</svg>
